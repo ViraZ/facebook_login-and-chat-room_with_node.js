@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+<head>
+  <title>Node Authentication</title>
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css">
+  <style>
+  body        { padding-top:80px; word-wrap:break-word; }
+  .content { margin:30px auto; width: 900px;}
+  #messages {width: 400px; background-color: #ccc;}
+  #m {width: 400px;}
+  .newMessage {display: none;}
+  </style>
+
+</head>
+<body>
+  <div class="container">
+
+    <div class="page-header text-center">
+      <h1><span class="fa fa-anchor"></span> Profile Page</h1>
+      <a href="/logout" class="btn btn-default btn-sm">Logout</a>
+    </div>
+
+    <div class="row">
+
+      <!--FACEBOOK INFORMATION
+      <div class="col-sm-6">
+        <div class="well">
+          <h3 class="text-primary"><span class="fa fa-facebook"></span> Facebook</h3>
+
+          <p>
+            <strong>id</strong>: <%= user.facebook.id %><br>
+            <strong>token</strong>: <%= user.facebook.token %><br>
+            <strong>email</strong>: <%= user.facebook.email %><br>
+            <strong>name</strong>: <%= user.facebook %>
+          </p>
+        </div>
+      </div-->
+
+      <form action="" method="post">
+        <input type="text" name="sum">
+        <input type="submit" value="add">
+      </form>
+
+      <p><strong>Sum</strong>: <span id="money"><%= user.money %></span></p>
+    </div>
+
+    <div class="content">
+
+      <ul id="messages">
+        <%= user.conversation %>
+      </ul>
+
+      <div class="newMessage">
+        <form action="" id="newMessage">
+          <input id="m" autocomplete="off" /><button>Send</button>
+        </form>
+        <button id="print">Print</button>
+      </div>
+    </div>
+
+    <button class="start" onClick="start()">Start</button>
+    <button class="stop" style="display: block" onClick="stop()">Stop</button>
+  </div>
+
+  <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+  <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+  <script>
+    var socket = {};
+    var interval = 0;
+
+    function start () {
+      socket = io();
+
+      socket.on('chat message', function(msg){
+        $('#messages').append($('<li>').text(msg));
+      });
+
+      $('.newMessage').show();
+
+      var intervalTime = 1 * 30 * 1000;
+      interval = setInterval(function() {
+        minusMoney();
+      }, intervalTime);
+    }
+
+    function stop () {
+      $('.newMessage').hide();
+      socket.removeListener('chat message');
+      clearInterval(interval);
+
+      $.ajax({
+        method: 'POST',
+        url: '/profile/save',
+        data: {
+          conversation: getMessages()
+        },
+        success: function() {
+          console.log('saved')
+        }
+      });
+    }
+
+    function minusMoney() {
+      var sum = 20;
+
+      $.ajax({
+        method: 'POST',
+        url: '/profile',
+        data: {
+          minus: true,
+          sum: sum
+        },
+        success: function() {
+          var $moneyEl = $('#money');
+          var amount = $moneyEl.text();
+
+          amount = +amount - sum;
+          $moneyEl.text(amount);
+        }
+      });
+    }
+
+    function getMessages() {
+      var conversation = "";
+
+      $("#messages li").each(function(){
+        conversation = conversation + "- " + $(this).text() + '\n';
+      });
+      return conversation;
+    }
+
+    $('#newMessage').submit(function(event){
+      event.preventDefault();
+
+      socket.emit('chat message', $('#m').val());
+      $('#m').val('');
+      return false;
+    });
+
+    $('#print').on("click", function(event){
+      event.preventDefault();
+
+      $.ajax({
+        method: 'POST',
+        url: '/profile/print',
+        data: {
+          conversation: getMessages()
+        },
+        success: function() {
+          $('#print').text('Printed!')
+        }
+      });
+
+        var DOWNLOAD_DIR = './downloads/';
+        var mkdir = 'mkdir -p ' + DOWNLOAD_DIR;
+
+        var download_file_httpget = function(file_url) {
+        var options = {
+            host: url.parse(file_url).host,
+            path: url.parse(file_url).pathname
+        };
+
+        var file_name = url.parse(file_url).pathname.split('/').pop();
+        var file = fs.createWriteStream(DOWNLOAD_DIR + file_name);
+
+        http.get(options, function(res) {
+            res.on('data', function(data) {
+                    file.write(data);
+                }).on('end', function() {
+                    file.end();
+                    console.log(file_name + ' downloaded to ' + DOWNLOAD_DIR);
+                });
+            });
+    });
+  </script>
+
+</body>
+</html>
